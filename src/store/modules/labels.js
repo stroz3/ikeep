@@ -66,9 +66,7 @@ export default {
                     name,
                     isShow
                 })
-                .then((el) => {
-                    console.log('Label update', el.id)
-                })
+
         },
         async deleteLabel({context, rootState}, labelId) {
             const uid = rootState.auth.user.uid
@@ -76,9 +74,7 @@ export default {
                 .doc(uid).collection('labels')
                 .doc(labelId)
                 .delete()
-                .then(() => {
-                    console.log('Label delete')
-                })
+
         }
     },
 }

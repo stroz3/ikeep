@@ -5,6 +5,7 @@ import '@mdi/font/css/materialdesignicons.css'
 import Toasted from 'vue-toasted';
 import firebase from "firebase/compat/app";
 
+
 import 'firebase/compat/auth';
 import 'firebase/compat/messaging';
 import 'firebase/compat/firestore';
@@ -13,12 +14,21 @@ import 'firebase/compat/database';
 import vuetify from './plugins/vuetify'
 import {firestorePlugin} from 'vuefire'
 import {Vuelidate} from "vuelidate";
+import Vue2Editor from "vue2-editor";
+
+
 
 Vue.config.productionTip = false
 Vue.use(firestorePlugin)
 Vue.use(Vuelidate)
 Vue.use(Toasted)
 Vue.use(vuetify)
+Vue.use(Vue2Editor)
+
+
+
+
+
 
 
 import {store} from './store/' // Подключение store от vuex

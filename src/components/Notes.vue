@@ -25,7 +25,7 @@
             <div>
               <v-card>
                 <div v-if="note.imageData !== null">
-                  <img width="100%" :height="height" :src="note.img">
+                  <img alt="" width="100%" :height="height" :src="note.img">
                 </div>
                 <v-card-title>
                   <span class="text-h5">Заметка</span>
@@ -38,14 +38,7 @@
                                v-model="note.title">
                       </v-col>
                       <v-col cols="12" style="padding: 0">
-                        <v-textarea
-                            row-height="1"
-                            auto-grow
-                            placeholder="Заметка..."
-                            flat solo
-                            v-model="note.description">
-                          >
-                        </v-textarea>
+                         <vue-editor v-model="note.description" ></vue-editor>
                       </v-col>
                       <v-col>
                         <v-chip close
@@ -53,7 +46,7 @@
                                 close-icon="mdi-delete"
                                 @click:close="note.label.splice(index, 1)"
                                 v-for="(label, index) in note.label"
-                                v-bind:key="label"
+                                v-bind:key="index"
                                 style="margin-right: 10px"
                         >
                           {{ label.name }}
@@ -106,7 +99,7 @@
                           ></v-checkbox>
                         </v-container>
                         <v-divider v-if="search"></v-divider>
-                        <div v-if="search" @click="addLabel()"
+                        <div v-if="search" @click="addNewLabel"
                              style="padding-top: 10px;font-size:13px; cursor: pointer">
                           <v-icon>add</v-icon>
                           Создать ярлык: {{ search }}
@@ -135,7 +128,7 @@
         </v-row>
       </form>
       <div class="notes">
-        <note :notes="notes"></note>
+        <note :notes="notes" :labels="labels" ></note>
       </div>
     </v-app>
 
@@ -143,7 +136,6 @@
 </template>
 
 <script>
-import {mapGetters} from 'vuex'
 import Note from "@/components/NoteItem";
 import "firebase/compat/storage";
 import firebase from "firebase/compat/app";
@@ -153,7 +145,7 @@ export default {
   name: "Notes",
   components: {
     Label,
-    Note
+    Note,
   },
 
   data() {
@@ -169,7 +161,7 @@ export default {
       imageData: null,
       height: 0,
       search: '',
-      modal_search: false
+      modal_search: false,
     }
   },
   computed: {
@@ -217,11 +209,18 @@ export default {
           })
 
     },
-    async addLabel() {
+    async addNewLabel() {
+      for(let el of this.labels){
+        if(el && el.name === this.search){
+          this.$toasted.info('this label is already exists', {duration: 1000})
+          return
+        }
+      }
       await this.$store.dispatch('labels/addLabel', {
         name: this.search
       })
       await this.$store.dispatch("main/addLabelToLinks", this.$store.getters["labels/items"])
+      this.note.label.push(this.labels[this.labels.map(e=>e.name).indexOf(this.search)])
       this.search = ''
     },
 
@@ -258,6 +257,9 @@ export default {
 </script>
 
 <style>
+.ql-toolbar.ql-snow,.ql-container.ql-snow{
+  border: none !important;
+}
 .textArea-auto {
   width: 100%;
   border: 0;

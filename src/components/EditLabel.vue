@@ -60,6 +60,11 @@ export default {
     edit: true,
     name: ''
   }),
+  async created() {
+    await this.$store.dispatch('notes/bindNotes')
+    await this.$store.dispatch('labels/bindLabels')
+    await this.$store.dispatch('main/addLabelsToLinks', this.$store.getters["labels/items"])
+  },
   methods: {
     async updateLabel(e, index, labelId) {
       // Задаем новое имя
@@ -80,6 +85,7 @@ export default {
 
     },
     async deleteLabel(labelId) {
+      await this.$store.dispatch('notes/deleteLabelFromNotes', labelId)
       await this.$store.dispatch('main/deleteLabelFromLinks', labelId)
       await this.$store.dispatch('labels/deleteLabel', labelId)
     },
@@ -98,7 +104,7 @@ export default {
     }
   },
   computed: {
-    addLabelToLinks(name){
+    addLabelToLinks(){
       this.labels.forEach(el=>{
         if(el.name === this.name){
           this.$store.dispatch('main/addLabelToLinks', el)
