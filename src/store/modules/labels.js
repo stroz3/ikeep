@@ -25,7 +25,9 @@ export default {
         },
         changeShow(state, {index, bool}) {
             state.items[index].isShow = bool
-            // state.items[index].isShow = bool
+        },
+        deleteLabel(state, labelId){
+            state.items.splice(state.items.findIndex(el => el.id === labelId), 1)
         },
         clearItems(state){
           return state.items = []

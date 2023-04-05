@@ -8,23 +8,23 @@ export default {
     namespaced: true, state: {
         // items - данные, которым мы присвоили notes
         items: [],
-
-
+        layouts:[]
     }, getters: {
         items(state) {
             return state.items
         },
-
-
+        layouts(state){
+            return state.layouts
+        }
     }, mutations: {
-        // notes - данные, которые мы взяли с firebase
-        // items - данные, которым мы присвоили notes
-        // setNotes(state, user) {
-        //     state.items = user.notes
-        // }
-
-        updateLabel(state, {labels, noteId}){
-            state.items[state.items.map(e => e.id).indexOf(noteId)].label = labels
+        clearInfo(state){
+         return [
+             state.items = [],
+             state.layouts = []
+         ]
+        },
+        deleteLabel(state, {noteId, labelId}){
+            state.items[state.items.findIndex(el => el.id === noteId)].label.splice(state.items.findIndex(el => el.id === labelId), 1)
         },
         deleteLabelFromNotes(state, labelId){
             for(const el of state.items){
@@ -41,26 +41,52 @@ export default {
         updateDescription(state, {updateDescription, noteId}) {
             state.items[state.items.map(e => e.id).indexOf(noteId)].description = updateDescription
         },
+        labelItems(state, newArray){
+            state.items = []
+            state.items.push(...newArray)
+        },
+        addLayout(state, newLayout){
+            state.layouts.push(newLayout)
+        },
+        addNewBlock(state){
+            state.layouts = []
+            let layout = state.items.map(e => e.layout)
+            if(state.layouts.length > 0){
+                for(const el of layout){
+                  state.layouts.map(e => e.i).indexOf(el.i) === -1 ? state.layouts.push(el) : console.log('this item already exists')
+                }
+            }
+            else{
+                state.layouts.push(...layout)
+            }
+        },
+        updateItemPosition(state, { i, x, y }) {
+          const itemIndex = state.layouts.findIndex(item => item.i === i)
+          if (itemIndex >= 0) {
+            state.layouts[itemIndex].x = x
+            state.layouts[itemIndex].y = y
+          }
+        },
+        updateItemSize(state, { i, h }) {
+          const itemIndex = state.layouts.findIndex(item => item.i === i)
+            console.log(itemIndex)
+          if (itemIndex >= 0) {
+            state.layouts[itemIndex].h = h
+          }
+        },
+        deleteLayouts(state, i){
+            state.layouts.forEach((el, index) =>{
+              if(el.i === i){
+                state.layouts.splice(index, 1)
+              }
+            })
+        }
     }, actions: {
-        // getNotes() {
-        //     // Сюда мы прокидываем обращение к Firebase ищем data
-        //     db.collection('notes')
-        //         // Берем айди нашей коллекции
-        //         .doc('JJ7uPS0i2C9eJBRxWVel')
-        //         //Получаем нашу коллекцию
-        //         .get()
-        //         // Принимаем Callback функцию
-        //         .then(res => {
-        //             const notes = res.data()
-        //             return notes
-        //         })
-        //     // Здесь мы отправляем данные в mutations
-        // },
         // Получение с Firebase
         bindNotes: firestoreAction(({bindFirestoreRef, rootState}) => {
             const uid = rootState.auth.user.uid
             // return the promise returned by `bindFirestoreRef`
-            return bindFirestoreRef('items', db.collection('users').doc(uid).collection('notes'))
+            return bindFirestoreRef('items', db.collection('users').doc(uid).collection('notes').orderBy("sortOrder", 'asc'))
         }), // Добавление с Firebase
         addNotes({rootState}, note) {
             // const userRef = db.collection('profiles').doc(rootState.auth.user.uid)
@@ -72,13 +98,21 @@ export default {
                         'id': docRef.id
                     }).then()
                 })
-            // .doc(uid).update({
-            //     notes: firebase.firestore.FieldValue.arrayUnion(note)
-            // })
         },
+        addLayouts({rootState}, noteId) {
+            // const userRef = db.collection('profiles').doc(rootState.auth.user.uid)
+            const uid = rootState.auth.user.uid
+            return db.collection('users')
+                .doc(uid).collection('notes').add(note)
+                .then((docRef)=>{
+                    docRef.update({
+                        'id': docRef.id
+                    }).then()
+                })
 
+        },
         // Редактирование с Firebase
-        async updateNote({rootState, getters, dispatch}, {noteId}) {
+        async updateNote({rootState, getters}, noteId) {
             const uid = rootState.auth.user.uid
             let note = getters.items[getters.items.map(e => e.id).indexOf(noteId)]
             await db.collection('users')
@@ -87,12 +121,28 @@ export default {
                 .doc(noteId)
                 .update(
                     {...note}
-                    // Добавить в коллекцию notes - labels
-                    // Добавить возможность редактировать картинки, label
-                    //
                 )
-                .then(() => {
-                })
+                .then(_ => {})
+        },
+        async updateLayout({rootState, getters}, {noteId}) {
+            const uid = rootState.auth.user.uid
+            let note = getters.layouts[getters.items.map(e => e.id).indexOf(noteId)]
+            let timer = null
+            clearTimeout(timer);
+            timer = setTimeout(async () => {
+                    await db.collection('users')
+                        .doc(uid)
+                        .collection('notes')
+                        .doc(noteId)
+                        .update({
+                            layout: note
+                        })
+                        .then(() => {
+                        })
+                        .catch(e => {
+                            Vue.toasted.error(e)
+                        })
+                }, 500)
         },
         async deleteLabelFromNotes({rootState, getters, commit}, labelId){
             await commit("deleteLabelFromNotes", labelId)
@@ -155,8 +205,11 @@ export default {
         // Удаление с Firebase
         deleteNote: firestoreAction(({rootState, state}, noteId) => {
             const uid = rootState.auth.user.uid
+            state.items.splice(state.items.map(el=>el.id).indexOf(noteId), 1)
             return db.collection('users')
                 .doc(uid).collection('notes').doc(noteId).delete()
         })
     }
 }
+
+

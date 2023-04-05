@@ -1,45 +1,283 @@
 <template>
-    <div class="notes">
-        <note-item :notes="notes" :labels="labels"></note-item>
-    </div>
+  <div>
+    <v-app>
+      <form>
+        <v-row justify="center" style="padding-top: 40px">
+          <v-dialog
+              v-model="dialog"
+              scrollable
+              max-width="600px"
+              height="auto"
+          >
+
+
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                  color="dark"
+                  dark
+                  v-bind="attrs"
+                  v-on="on"
+              >
+                <input type="text" placeholder="Заметки...">
+              </v-btn>
+
+            </template>
+            <div @keyup.esc="addNewNotes()">
+              <v-card>
+                <div v-if="note.imageData !== null">
+                  <img alt="" width="100%" :height="height" :src="note.img">
+                </div>
+                <v-card-title>
+                  <span class="text-h5">Заметка</span>
+                </v-card-title>
+                <v-card-text>
+                  <v-container>
+                    <v-row>
+                      <v-col cols="12">
+                        <input class="input-append" type="text" placeholder="Введите Заголовок"
+                               v-model="note.title">
+                      </v-col>
+                      <v-col cols="12" style="padding: 0">
+                         <vue-editor v-model="note.description" ></vue-editor>
+                      </v-col>
+                      <v-col>
+                        <v-chip close
+                                small
+                                close-icon="mdi-delete"
+                                @click:close="note.label.splice(index, 1)"
+                                v-for="(label, index) in note.label"
+                                v-bind:key="index"
+                                style="margin-right: 10px"
+                        >
+                          {{ label.name }}
+                        </v-chip>
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </v-card-text>
+                <v-card-actions>
+                  <div>
+                    <v-btn @click="click1" icon rounded>
+                      <v-icon>
+                        photo
+                      </v-icon>
+                    </v-btn>
+                    <input
+                        @change="previewImage"
+                        type="file"
+                        ref="input1"
+                        style="display: none"
+                        accept="image/*"
+                    >
+                  </div>
+                  <div style="position:relative;">
+                    <v-btn class="tooltip" icon rounded @click="modal_search = !modal_search">
+                      <v-icon>
+                        add_box
+                      </v-icon>
+                      <span class="tooltiptext">
+                        Добавить ярлык
+                      </span>
+                    </v-btn>
+                    <div class="modal_search" v-if="modal_search">
+                      <div>
+                        <h3>Добавить ярлык</h3>
+                        <div style="display: flex; margin-top: 5px">
+                          <input id="search" type="text" placeholder="Введите название ярлыка"
+                                 style="font-size: 13px; width: 165px; outline: none; color: white" v-model="search">
+                          <label for="search" style="width: 25px; height: 25px">
+                            <v-icon style="font-size: 20px">search</v-icon>
+                          </label>
+                        </div>
+                        <v-container class="px-0" style="max-height: 150px; overflow-y: auto; overflow-x:hidden" fluid>
+                          <v-checkbox class="my-checkbox" v-for="(label, index) in labels" :key="label.id"
+                                      id="label"
+                                      :label="label.name"
+                                      @click=""
+                                      v-model="note.label"
+                                      :value="labels[index]"
+                          ></v-checkbox>
+                        </v-container>
+                        <v-divider v-if="search"></v-divider>
+                        <div v-if="search" @click="addNewLabel"
+                             style="padding-top: 10px;font-size:13px; cursor: pointer">
+                          <v-icon>add</v-icon>
+                          Создать ярлык: {{ search }}
+                        </div>
+                      </div>
+                    </div>
+
+
+                  </div>
+                </v-card-actions>
+              </v-card>
+            </div>
+          </v-dialog>
+        </v-row>
+      </form>
+      <div v-if="loader" class="text-center" style="margin-top: 100px; margin-bottom: 100px">
+              <v-progress-circular
+                indeterminate
+                color="white"
+              ></v-progress-circular>
+      </div>
+      <div v-else class="notes">
+          <note-item :notes="notesLabel" :labels="labels" :colNum="colNum" :draggble="draggble" :layouts="layouts" ></note-item>
+      </div>
+    </v-app>
+  </div>
 </template>
 
 <script>
 import "firebase/compat/storage";
 import NoteItem from "@/components/NoteItem.vue";
-
 export default {
   name: "Label",
   components:{
     NoteItem
   },
   data:()=>({
-    notes:[]
+    notesLabel:[],
+    dialog: false,
+    note: {
+      title: 'asd',
+      description: '',
+      label: {},
+      img: '',
+      imgName: '',
+      sortOrder: 0
+    },
+    imageData: null,
+    height: 0,
+    search: '',
+    modal_search: false,
+    colNum: 6,
+    draggble:false,
+    loader: true,
   }),
-  async created() {
-    await this.$store.dispatch('notes/bindNotes')
+  async mounted() {
     await this.$store.dispatch('labels/bindLabels')
     await this.$store.dispatch('main/addLabelsToLinks', this.$store.getters["labels/items"])
-    await this.getNotes()
+    await this.$store.dispatch('notes/bindNotes').finally(_=>{
+      this.loader = false
+      this.getNotes()
+    })
   },
   watch: {
     // при изменениях маршрута запрашиваем данные снова
     $route: 'getNotes',
+
   },
   methods: {
     async getNotes() {
-      this.notes = []
-      let notes = await this.$store.getters["notes/items"]
-      for (const el of notes) {
-        for (const elLabel of el.label) {
-          if (this.$route.params.id === elLabel.labelId) {
-            this.notes.push(el)
+      this.notesLabel = []
+      for (const el of this.notes) {
+        if(el.label.length > 0){
+          for (const elLabel of el.label) {
+            if (this.$route.params.id === elLabel.labelId) {
+              this.notesLabel.push(el)
+            }
           }
         }
+      }
+      await this.$store.commit("notes/labelItems", this.notesLabel)
+      await this.$store.commit('notes/addNewBlock')
+    },
+    click1() {
+      this.$refs.input1.click()
+    },
+    previewImage(event) {
+      this.uploadValue = 0;
+      this.note.img = null;
+      this.imageData = event.target.files[0]
+      this.onUnpload()
+    },
+    onUnpload() {
+      this.note.img = null;
+      const storageRef = firebase.storage().ref(`${this.imageData.name}`).put(this.imageData);
+      storageRef.on(`state_changed`, snapshot => {
+            this.uploadValue = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          }, error => {
+            this.$toasted.error(error.message)
+          },
+          () => {
+            this.uploadValue = 100;
+            storageRef.snapshot.ref.getDownloadURL().then((url) => {
+              this.note.img = url;
+              this.height = 400 + 'px';
+              this.note.imgName = this.imageData.name
+            })
+          })
+    },
+    async addNewLabel() {
+      for(let el of this.labels){
+        if(el && el.name === this.search){
+          this.$toasted.info('this label is already exists', {duration: 1000})
+          return
+        }
+      }
+      await this.$store.dispatch('labels/addLabel', {
+        name: this.search
+      })
+      await this.$store.dispatch("main/addLabelToLinks", this.$store.getters["labels/items"])
+      this.note.label.push(this.labels[this.labels.map(e=>e.name).indexOf(this.search)])
+      this.search = ''
+    },
+    async addNewNotes() {
+      this.dialog = false
+      if(this.note.title !== '' || this.note.description !== ''){
+          this.note["layout"] = {
+            x: this.getNextX(),
+            y: (this.$store.getters["notes/layouts"].length === 6 ? this.$store.getters["notes/layouts"].length + this.colNum : 0),
+            w: 1,
+            h: 5,
+            i: this.index,
+          }
+          this.index++
+          this.note.sortOrder = this.order
+          console.log(this.note.sortOrder)
+            await this.$store.dispatch('notes/addNotes', {...this.note})
+              .finally(_ => {
+                this.$store.commit("notes/addLayout", this.note.layout)
+              })
+              .catch(e => this.$toasted.error(e, {duration: 3000}))
+        }
+      this.note =
+          {
+            title: 'asd' + this.index,
+            description: '',
+            label: [],
+            img: '',
+            imgName: ''
+          }
+      this.imageData = null
+      this.height = 0
+    },
+    getNextX() {
+      const lastItem = this.notesLabel.length
+      if (lastItem) {
+        return this.notesLabel.length % this.colNum
+      } else {
+        return 0
       }
     },
   },
   computed: {
+    notes(){
+      return this.$store.getters["notes/items"]
+    },
+    layouts(){
+      return this.notes.map((el, index) => {
+        return {
+          i: el.layout.i,
+          x: index % this.colNum,
+          y: Math.floor(index / this.colNum),
+          w: el.layout.w,
+          h: el.layout.h
+        }
+      })
+
+    },
     labels() {
       return this.$store.getters["labels/items"]
     }

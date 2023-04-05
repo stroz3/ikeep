@@ -1,5 +1,5 @@
 <template>
-  <v-app id="inspire">
+  <v-app id="inspire" v-if="!$store.getters['auth/isAuthenficated']">
     <v-container fluid fill-height>
       <v-layout align-center justify-center>
         <v-flex xs12 sm8 md4>
@@ -38,7 +38,7 @@
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="primary" to="/login">Already have account</v-btn>
+              <v-btn color="primary" outlined to="/login">Already have account</v-btn>
               <v-btn
                   @click.native="handleRegister"
                   color="primary"
@@ -76,12 +76,10 @@ export default {
                         user: user.user.uid
                       }
                     })
-            this.$router.push('/')
           })
-          .catch(errorMessage => {
-            this.$toasted.error(errorMessage, {duration: 3000})
+          .finally(()=>{
+            this.$router.push('/notes')
           })
-
     }
   }
 }

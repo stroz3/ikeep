@@ -2,6 +2,7 @@ import Vue from 'vue'
 import App from './App.vue'
 import router from './router'
 import '@mdi/font/css/materialdesignicons.css'
+import 'material-design-icons-iconfont/dist/material-design-icons.css'
 import Toasted from 'vue-toasted';
 import firebase from "firebase/compat/app";
 

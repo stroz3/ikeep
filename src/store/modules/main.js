@@ -4,14 +4,21 @@ export default {
         items: [
             {title: 'Заметки', icon: 'mdi-lightbulb-outline', link: '/notes'},
             {title: 'Редактирование ярлыков', icon: 'create', link: '/edit'},
-        ]
+        ],
+        loader:true
     },
     getters:{
         items(state){
             return state.items
+        },
+        loader(state){
+            return state.loader
         }
     },
     mutations:{
+        changeLoader(state, val){
+            state.loader = val
+        },
         addLinkIntoItem(state, {name, labelId}){
             let index = state.items.findIndex(x => x.label===labelId)
             if(index === -1){
@@ -49,8 +56,6 @@ export default {
     },
     actions:{
         addLabelsToLinks({getters, commit }, labels){
-
-
             for(const el of labels){
                 let name = el.name
                 let labelId = el.id

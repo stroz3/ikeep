@@ -3,13 +3,14 @@
     <v-main>
       <v-card v-if="isAuthenficated">
         <v-app-bar>
-          <v-app-bar-nav-icon @click="mini = !mini"></v-app-bar-nav-icon>
+          <v-app-bar-nav-icon  @click="mini = !mini"></v-app-bar-nav-icon>
           <v-row style="justify-content: right; margin-right: 10px">
             <v-menu
                 bottom
                 min-width="200px"
                 rounded
                 offset-y
+
             >
               <template v-slot:activator="{ on }">
                 <v-btn
@@ -72,6 +73,7 @@
                   v-for="item in items"
                   :key="item.label"
                   :to="item.link"
+
               >
 
                 <v-list-item-icon>
@@ -85,7 +87,7 @@
             </v-list-item-group>
           </v-list>
         </v-navigation-drawer>
-        <router-view :include="['auth']" style="width: 100%"/>
+        <router-view  style="width: 100%"/>
       </div>
     </v-main>
   </v-app>
@@ -95,16 +97,19 @@
 
 import {indexOf} from "core-js/internals/array-includes";
 import label from "@/components/Label.vue";
-
 export default {
   name: 'App',
   data: () => ({
     drawer: true,
     labels:{},
     group: null,
-    mini: true,
+    mini: JSON.parse(localStorage.getItem('mini')),
   }),
-
+  watch: {
+    mini(newVal){
+      localStorage.setItem('mini', newVal)
+    }
+  },
   computed: {
     user() {
       return this.$store.state.auth.user
@@ -126,6 +131,7 @@ export default {
     async handleLogOut() {
       await this.$store.dispatch('auth/singOut').then(async _ => {
         await this.$store.commit("labels/clearItems")
+        await this.$store.commit("notes/clearInfo")
         await this.$store.commit("main/clearLinks")
         await this.$store.commit("auth/setAuthUser", null)
         this.$router.push('/login').catch(() => {
@@ -133,7 +139,8 @@ export default {
       }).catch(e => {
         this.$toasted.error(e, {duration: 3000})
       })
-    }
+    },
+
   }
 };
 </script>

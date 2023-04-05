@@ -15,5 +15,10 @@ npm run dev
 npm run build
 ```
 
+### Deploy Changes
+```
+firebase deploy
+```
+
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).

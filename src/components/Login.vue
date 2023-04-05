@@ -1,5 +1,5 @@
 <template>
-  <v-app id="inspire">
+  <v-app id="inspire" v-if="!$store.getters['auth/isAuthenficated']">
     <v-container fluid fill-height>
       <v-layout align-center justify-center>
         <v-flex xs12 sm8 md4>
@@ -30,7 +30,7 @@
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="primary" to="/registration">create account</v-btn>
+              <v-btn color="primary" outlined to="/registration" >create account</v-btn>
               <v-btn color="primary" @click="handleLogin">Login</v-btn>
             </v-card-actions>
           </v-card>
@@ -51,10 +51,9 @@ export default {
   }),
   methods: {
     handleLogin() {
-      this.$store.dispatch('auth/singIn', this.form).then(_ => {
-        this.$router.push('/')
-      }).catch(e => {
-        this.$toasted.error(e, {duration: 3000})
+      this.$store.dispatch('auth/singIn', this.form)
+          .finally(_=>{
+              this.$router.push('/notes')
       })
     }
   }

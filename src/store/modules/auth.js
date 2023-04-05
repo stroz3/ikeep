@@ -1,6 +1,7 @@
 import {db} from "@/db";
 import {firestoreAction} from "vuexfire";
 import firebase from "firebase/compat/app";
+import Vue from "vue";
 
 export default {
     namespaced: true,
@@ -32,8 +33,7 @@ export default {
                     await user
                 })
                 .catch(e => {
-                    const message = e.message
-                    return Promise.reject(message)
+                    Vue.toasted.error(e.message)
                 })
         },
         singIn(context, {email, password}) {
@@ -44,14 +44,14 @@ export default {
                     return context.dispatch("bindUsers", context.getters["getUserUid"])
                 })
                 .catch(e => {
-                    return Promise.reject(e.message)
+                    Vue.toasted.error(e.message)
                 })
         },
         singOut(context) {
             return firebase.auth().signOut().then(() => {
                 context.commit('clearInfo')
             }).catch(e => {
-                return Promise.reject(e.message)
+                Vue.toasted.error(e.message)
             })
         },
         createUserProfile(_, {uid, userProfile}) {
@@ -71,3 +71,4 @@ export default {
         }
     }
 }
+

@@ -22,7 +22,7 @@
               </v-btn>
 
             </template>
-            <div>
+            <div @keyup.esc="addNewNotes()">
               <v-card>
                 <div v-if="note.imageData !== null">
                   <img alt="" width="100%" :height="height" :src="note.img">
@@ -93,7 +93,6 @@
                           <v-checkbox class="my-checkbox" v-for="(label, index) in labels" :key="label.id"
                                       id="label"
                                       :label="label.name"
-                                      @click=""
                                       v-model="note.label"
                                       :value="labels[index]"
                           ></v-checkbox>
@@ -106,20 +105,8 @@
                         </div>
                       </div>
                     </div>
-                    <v-btn
-                        color="blue darken-1"
-                        text
-                        @click="clearArea()"
-                    >
-                      Close
-                    </v-btn>
-                    <v-btn
-                        color="blue darken-1"
-                        text
-                        @click="addNewNotes()"
-                    >
-                      Save
-                    </v-btn>
+
+
                   </div>
                 </v-card-actions>
               </v-card>
@@ -127,11 +114,16 @@
           </v-dialog>
         </v-row>
       </form>
-      <div class="notes">
-        <note :notes="notes" :labels="labels" ></note>
+      <div v-if="loader" class="text-center" style="margin-top: 100px">
+          <v-progress-circular
+            indeterminate
+            color="white"
+          ></v-progress-circular>
+        </div>
+      <div v-else class="notes">
+        <note :layouts="layouts" :notes="notes" :labels="labels" :colNum="colNum" :draggble="draggble" ></note>
       </div>
     </v-app>
-
   </div>
 </template>
 
@@ -140,6 +132,8 @@ import Note from "@/components/NoteItem";
 import "firebase/compat/storage";
 import firebase from "firebase/compat/app";
 import Label from "@/components/Label";
+import login from "@/components/Login.vue";
+import Vue from "vue";
 
 export default {
   name: "Notes",
@@ -152,16 +146,21 @@ export default {
     return {
       dialog: false,
       note: {
-        title: '',
+        title: 'asd',
         description: '',
         label: [],
         img: '',
-        imgName: ''
+        imgName: '',
+        sortOrder: 0
       },
       imageData: null,
       height: 0,
       search: '',
       modal_search: false,
+      colNum: 6,
+      draggble: true,
+      loader: true,
+      index: 0,
     }
   },
   computed: {
@@ -170,20 +169,45 @@ export default {
     },
     labels() {
       return this.$store.getters["labels/items"]
-    }
+    },
+    order() {
+      if(this.notes.length > 0){
+        return this.notes[this.notes.length - 1].sortOrder + 1
+      }else{
+        return 0
+      }
+    },
+
+    layouts() {
+      return this.$store.getters["notes/layouts"].map(item => {
+        const { i, x, y, w, h } = item
+        return { i, x, y, w, h }
+      })
+    },
   },
   async mounted() {
-
-    await this.$store.dispatch('notes/bindNotes')
-    await this.$store.dispatch('auth/bindUsers', this.$store.getters["auth/getUserUid"])
+    await this.$store.dispatch('notes/bindNotes').finally(_ => {
+      this.loader = false
+      this.$store.dispatch('auth/bindUsers', this.$store.getters["auth/getUserUid"])
+      this.$store.commit("notes/addNewBlock")
+    })
     await this.$store.dispatch('labels/bindLabels')
     await this.$store.dispatch("main/addLabelsToLinks", this.$store.getters["labels/items"])
+    this.index = this.notes.length + 2
+  },
+  watch:{
+    dialog(newVal){
+      if(newVal === false){
+          this.addNewNotes()
+      }
+    },
 
   },
   methods: {
     click1() {
       this.$refs.input1.click()
     },
+
     previewImage(event) {
       this.uploadValue = 0;
       this.note.img = null;
@@ -196,7 +220,7 @@ export default {
       storageRef.on(`state_changed`, snapshot => {
             this.uploadValue = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           }, error => {
-            console.log(error.message)
+            this.$toasted.error(error.message)
           },
           () => {
             this.uploadValue = 100;
@@ -204,11 +228,11 @@ export default {
               this.note.img = url;
               this.height = 400 + 'px';
               this.note.imgName = this.imageData.name
-              // this.addNewNotes()
             })
           })
 
     },
+
     async addNewLabel() {
       for(let el of this.labels){
         if(el && el.name === this.search){
@@ -218,21 +242,41 @@ export default {
       }
       await this.$store.dispatch('labels/addLabel', {
         name: this.search
+      }).finally(_=>{
+          this.$store.dispatch("main/addLabelToLinks", this.$store.getters["labels/items"][this.$store.getters["labels/items"].map(el => el.name).indexOf(this.search)])
       })
-      await this.$store.dispatch("main/addLabelToLinks", this.$store.getters["labels/items"])
-      this.note.label.push(this.labels[this.labels.map(e=>e.name).indexOf(this.search)])
+      this.note.label.push(...this.labels.filter(e => e.name === this.search).map(label =>{{return {name: label.name, labelId: label.id}}}))
       this.search = ''
     },
-
+    getNextX() {
+      const lastItem = this.$store.getters["notes/layouts"][this.$store.getters["notes/layouts"].length - 1]
+      if (lastItem) {
+        return this.$store.getters["notes/layouts"].length % this.colNum
+      } else {
+        return 0
+      }
+    },
     async addNewNotes() {
       this.dialog = false
-      await this.$store.dispatch('notes/addNotes', {...this.note})
-          .then(_ => {
-          })
-          .catch(e => this.$toasted.error(e, {duration: 3000}))
+      if(this.note.title !== '' || this.note.description !== ''){
+          this.note["layout"] = {
+            x: this.getNextX(),
+            y: (this.$store.getters["notes/layouts"].length === this.colNum ? this.$store.getters["notes/layouts"].length + this.colNum : 0),
+            w: 1,
+            h: 5,
+            i: this.index,
+          }
+          this.index++
+          this.note.sortOrder = this.order
+            await this.$store.dispatch('notes/addNotes', {...this.note})
+              .finally(_ => {
+                this.$store.commit("notes/addLayout", this.note.layout)
+              })
+              .catch(e => this.$toasted.error(e, {duration: 3000}))
+        }
       this.note =
           {
-            title: '',
+            title: 'asd' + this.index,
             description: '',
             label: [],
             img: '',
@@ -247,12 +291,19 @@ export default {
         title: '',
         description: '',
         label: [],
-        img: ''
+        img: '',
+        layout:{
+          x:0,
+          y:0,
+          w:2,
+          h:5,
+        }
       }
       this.imageData = null
       this.height = 0
-    }
-  }
+    },
+
+  },
 }
 </script>
 
@@ -337,7 +388,6 @@ export default {
   margin: 50px 0 50px 0;
   padding-left: 15px;
   padding-right: 15px;
-  overflow-y: auto;
   width: 100%;
 }
 </style>
