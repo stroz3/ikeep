@@ -163,7 +163,7 @@ export default {
       index: 0,
     }
   },
-  computed: {
+    computed: {
     notes() {
       return this.$store.getters["notes/items"]
     },
@@ -190,10 +190,11 @@ export default {
       this.loader = false
       this.$store.dispatch('auth/bindUsers', this.$store.getters["auth/getUserUid"])
       this.$store.commit("notes/addNewBlock")
+    }).finally(_=>{
+        this.index = this.notes[this.notes.length - 1].layout.i + 1
     })
     await this.$store.dispatch('labels/bindLabels')
     await this.$store.dispatch("main/addLabelsToLinks", this.$store.getters["labels/items"])
-    this.index = this.notes.length + 2
   },
   watch:{
     dialog(newVal){
@@ -201,7 +202,6 @@ export default {
           this.addNewNotes()
       }
     },
-
   },
   methods: {
     click1() {
@@ -244,14 +244,14 @@ export default {
         name: this.search
       }).finally(_=>{
           this.$store.dispatch("main/addLabelToLinks", this.$store.getters["labels/items"][this.$store.getters["labels/items"].map(el => el.name).indexOf(this.search)])
+          this.note.label.push(...this.labels.filter(e => e.name === this.search).map(label =>{{return {name: label.name, labelId: label.id}}}))
       })
-      this.note.label.push(...this.labels.filter(e => e.name === this.search).map(label =>{{return {name: label.name, labelId: label.id}}}))
       this.search = ''
     },
     getNextX() {
       const lastItem = this.$store.getters["notes/layouts"][this.$store.getters["notes/layouts"].length - 1]
       if (lastItem) {
-        return this.$store.getters["notes/layouts"].length % this.colNum
+          return Math.floor(this.$store.getters["notes/layouts"].length % this.colNum)
       } else {
         return 0
       }

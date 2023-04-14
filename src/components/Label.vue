@@ -122,7 +122,7 @@
               ></v-progress-circular>
       </div>
       <div v-else class="notes">
-          <note-item :notes="notesLabel" :labels="labels" :colNum="colNum" :draggble="draggble" :layouts="layouts" ></note-item>
+          <note-item :getNotes="getNotes" :notes="notesLabel" :labels="labels" :colNum="colNum" :draggble="draggble" :layouts="layouts" ></note-item>
       </div>
     </v-app>
   </div>
@@ -182,6 +182,7 @@ export default {
       }
       await this.$store.commit("notes/labelItems", this.notesLabel)
       await this.$store.commit('notes/addNewBlock')
+
     },
     click1() {
       this.$refs.input1.click()

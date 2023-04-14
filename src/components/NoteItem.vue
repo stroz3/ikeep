@@ -327,24 +327,21 @@ export default {
         await this.$store.commit("notes/updateItemSize", {i, h})
       }
     },
-    async updateItem(noteId) {
-      await this.$store.dispatch('notes/updateNote', {noteId})
-    },
-    async deleteNote(noteId, i) {
+    deleteNote(noteId, i) {
       for (const el of this.notes){
         if(el.id === noteId && el.imgName){
-          await this.$store.dispatch("notes/deleteImg", noteId)
+          this.$store.dispatch("notes/deleteImg", noteId)
         }
       }
-      await this.$store.dispatch("notes/deleteNote", noteId).then(()=>{
-        this.show = false
+      this.$store.dispatch("notes/deleteNote", noteId).then(()=>{
+          this.show = false
       })
-      await this.$store.commit("notes/deleteLayouts", i)
+      this.$store.commit("notes/deleteLayouts", i)
     },
     async deleteImg(noteId){
       await this.$store.dispatch('notes/deleteImg', noteId).then(()=>{
         const i = this.notes[this.notes.map(el => el.id).indexOf(noteId)].layout.i
-        const h = this.notes[this.notes.map(el => el.id).indexOf(noteId)].layout.h - 3
+        const h = this.notes[this.notes.map(el => el.id).indexOf(noteId)].layout.h
         this.$store.commit("notes/updateItemSize", {i, h})
         this.noteDialogs.img = "", this.noteDialogs.imgName = "", this.height = 0}).catch(e=>{this.$toasted.error(e)})
     },
@@ -352,6 +349,8 @@ export default {
         await this.$store.commit("labels/deleteLabel", labelId)
         await this.$store.commit("notes/deleteLabel", {noteId, labelId})
         await this.updateItem(noteId)
+        this.$emit('getNotes')
+        debugger
     },
     async addNewLabel() {
       for(let el of this.labels){
@@ -375,6 +374,9 @@ export default {
         let noteId = this.notes[this.notes.map(el => el.layout.i).indexOf(el.i)].id
         this.$store.dispatch("notes/updateLayout", {noteId})
       })
+    },
+    async updateItem(noteId) {
+      await this.$store.dispatch('notes/updateNote', noteId)
     },
   },
   computed: {

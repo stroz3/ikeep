@@ -24,7 +24,7 @@ export default {
          ]
         },
         deleteLabel(state, {noteId, labelId}){
-            state.items[state.items.findIndex(el => el.id === noteId)].label.splice(state.items.findIndex(el => el.id === labelId), 1)
+            state.items[state.items.findIndex(el => el.id === noteId)].label.splice(state.items.findIndex(el => el.label.id === labelId), 1)
         },
         deleteLabelFromNotes(state, labelId){
             for(const el of state.items){
@@ -80,6 +80,7 @@ export default {
                 state.layouts.splice(index, 1)
               }
             })
+            // Добавить фунфионал, который будет сдвигать плиты после удаления
         }
     }, actions: {
         // Получение с Firebase
@@ -205,7 +206,9 @@ export default {
         // Удаление с Firebase
         deleteNote: firestoreAction(({rootState, state}, noteId) => {
             const uid = rootState.auth.user.uid
-            state.items.splice(state.items.map(el=>el.id).indexOf(noteId), 1)
+            state.items.filter(el =>{
+                return el.id !== noteId
+            })
             return db.collection('users')
                 .doc(uid).collection('notes').doc(noteId).delete()
         })
